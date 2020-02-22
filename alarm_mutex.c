@@ -54,6 +54,8 @@ time_t current_alarm = 0;
 time_t current_alarm_1 = 0;
 time_t current_alarm_2 = 0;
 time_t current_alarm_3 = 0;
+// printed keeps track if the termination of a thread has printed
+int printed = 1; 
 
 /*
  * Insert alarm entry on list, in order.
@@ -257,7 +259,12 @@ void *display_1_thread (void *arg){
         } else
             expired = 1;
         if (expired) {
+            // lower the count of alarms in this thread
             display1_count--;
+            //if the thread is empty, terminate
+            if(display1_count == 0)
+                printed = 0;
+            printf("Alarm (%d) Printed by Alarm Display Thread 1 at %ld:%ld", alarm->id,  time (NULL), alarm->time);
             printf ("(%d) %s\n", alarm->seconds, alarm->message);
             free (alarm);
         }
@@ -313,11 +320,11 @@ void *display_2_thread (void *arg){
             expired = 1;
         if (expired) {
             printf ("(%d) %s\n", alarm->seconds, alarm->message);
+            printf("Alarm (%d) Printed by Alarm Display Thread 2 at %ld:%ld", alarm->id,  time (NULL), alarm->time);
             display2_count--;
+            if(display2_count == 0)
+                printed = 0;
             free (alarm);
-            if (display2_count == 0){
-                pthread_cancel();
-            }
         }
     }
 }
@@ -371,7 +378,12 @@ void *display_3_thread (void *arg){
             expired = 1;
         if (expired) {
             printf ("(%d) %s\n", alarm->seconds, alarm->message);
-            display3_count--;
+            printf("Alarm (%d) Printed by Alarm Display Thread 2 at %ld:%ld", alarm->id,  time (NULL), alarm->time);
+            // lower the count of alarms in this thread
+            display1_count--;
+            //if the thread is empty, terminate
+            if(display1_count == 0)
+                printed = 0;
             free (alarm);
         }
     }
@@ -407,6 +419,26 @@ void *alarm_thread (void *arg)
         &thread3, NULL, display_3_thread, NULL);
     if (status3 != 0)
         err_abort (status3, "Create alarm thread");
+    
+    while(1){
+        //if a thread is empty and needs to be terminated (printed boolean keeps track
+        // of if a thread should be terminated
+        if(display1_count == 0 && printed == 0){
+            pthread_cancel(thread1);
+            printf("Alarm Thread Terminated Display Thread 1 at %ld\n", time (NULL));
+            printed = 1;
+        }
+        else if(display2_count == 0 && printed == 0){
+            pthread_cancel(thread2);
+            printf("Alarm Thread Terminated Display Thread 2 at %ld\n", time (NULL));
+            printed = 1;
+        }
+        else if(display3_count == 0 && printed == 0){
+            pthread_cancel(thread3);
+            printf("Alarm Thread Terminated Display Thread 3 at %ld\n", time (NULL));
+            printed = 1;
+        }
+    }
 	
 	
     return NULL;
@@ -430,7 +462,7 @@ int main (int argc, char *argv[])
     char *p;
     int isDigit = 0;
 
-
+    //create the alarm thread
     status = pthread_create (
         &thread, NULL, alarm_thread, NULL);
     if (status != 0)
