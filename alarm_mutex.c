@@ -50,7 +50,6 @@ int display1_count = 0;
 int display2_count = 0;
 int display3_count = 0;
 alarm_t *alarm_list = NULL;
-time_t current_alarm = 0;
 time_t current_alarm_1 = 0;
 time_t current_alarm_2 = 0;
 time_t current_alarm_3 = 0;
@@ -104,7 +103,7 @@ void alarm_insert (alarm_t *alarm)
      * work), or if the new alarm comes before the one on
      * which the alarm thread is waiting.
      */
-    // if ((current_alarm_1 == 0 || alarm->time < current_alarm_1) && display1_count <= display2_count && display1_count <= display2_count) {
+    // assign alarm to existing display alarm thread which has the smallest number of alarms assinged
      if (display1_count == 0) {
         printf("\n count1: %d, count2: %d, count3: %d", display1_count, display2_count, display3_count);
 
@@ -137,8 +136,7 @@ void alarm_insert (alarm_t *alarm)
         if (status != 0)
             err_abort (status, "Signal cond");
     }
-    // assign alarm to existing display alarm thread which has the smallest number of alarms assinged
-    else if (display1_count != 0 && display2_count != 0 && display3_count != 0){
+    if (display1_count != 0 && display2_count != 0 && display3_count != 0){
         if (display1_count <= display2_count && display1_count <= display3_count){
             printf("\n count1: %d, count2: %d, count3: %d", display1_count, display2_count, display3_count);
             printf("\nAlarm Thread Display Alarm Thread 1 Assigned to Display Alarm( %d at %ld: %s.", alarm->id,  time (NULL), alarm->message);
@@ -226,7 +224,7 @@ void *display_1_thread (void *arg){
          * added. Setting current_alarm to 0 informs the insert
          * routine that the thread is not busy.
          */
-        current_alarm = 0;
+        current_alarm_1 = 0;
         while (alarm_list == NULL) {
             status = pthread_cond_wait (&alarm_cond1, &alarm_mutex);
             if (status != 0)
@@ -243,8 +241,8 @@ void *display_1_thread (void *arg){
 #endif
             cond_time.tv_sec = alarm->time;
             cond_time.tv_nsec = 0;
-            current_alarm = alarm->time;
-            while (current_alarm == alarm->time) {
+            current_alarm_1 = alarm->time;
+            while (current_alarm_1 == alarm->time) {
                 status = pthread_cond_timedwait (
                     &alarm_cond1, &alarm_mutex, &cond_time);
                 if (status == ETIMEDOUT) {
@@ -264,8 +262,8 @@ void *display_1_thread (void *arg){
             //if the thread is empty, terminate
             if(display1_count == 0)
                 printed = 0;
-            printf("Alarm (%d) Printed by Alarm Display Thread 1 at %ld:%ld", alarm->id,  time (NULL), alarm->time);
-            printf ("(%d) %s\n", alarm->seconds, alarm->message);
+            printf("\nAlarm (%d) Printed by Alarm Display Thread 1 at %ld:%ld\n", alarm->id,  time (NULL), alarm->time);
+            printf ("\n(%d) %s\n", alarm->seconds, alarm->message);
             free (alarm);
         }
     }
@@ -286,7 +284,7 @@ void *display_2_thread (void *arg){
          * added. Setting current_alarm to 0 informs the insert
          * routine that the thread is not busy.
          */
-        current_alarm = 0;
+        current_alarm_2 = 0;
         while (alarm_list == NULL) {
             status = pthread_cond_wait (&alarm_cond2, &alarm_mutex);
             if (status != 0)
@@ -303,8 +301,8 @@ void *display_2_thread (void *arg){
 #endif
             cond_time.tv_sec = alarm->time;
             cond_time.tv_nsec = 0;
-            current_alarm = alarm->time;
-            while (current_alarm == alarm->time) {
+            current_alarm_2 = alarm->time;
+            while (current_alarm_2 == alarm->time) {
                 status = pthread_cond_timedwait (
                     &alarm_cond2, &alarm_mutex, &cond_time);
                 if (status == ETIMEDOUT) {
@@ -319,8 +317,8 @@ void *display_2_thread (void *arg){
         } else
             expired = 1;
         if (expired) {
-            printf ("(%d) %s\n", alarm->seconds, alarm->message);
-            printf("Alarm (%d) Printed by Alarm Display Thread 2 at %ld:%ld", alarm->id,  time (NULL), alarm->time);
+            printf ("\n(%d) %s\n", alarm->seconds, alarm->message);
+            printf("\nAlarm (%d) Printed by Alarm Display Thread 2 at %ld:%ld\n", alarm->id,  time (NULL), alarm->time);
             display2_count--;
             if(display2_count == 0)
                 printed = 0;
@@ -344,7 +342,7 @@ void *display_3_thread (void *arg){
          * added. Setting current_alarm to 0 informs the insert
          * routine that the thread is not busy.
          */
-        current_alarm = 0;
+        current_alarm_3 = 0;
         while (alarm_list == NULL) {
             status = pthread_cond_wait (&alarm_cond3, &alarm_mutex);
             if (status != 0)
@@ -361,8 +359,8 @@ void *display_3_thread (void *arg){
 #endif
             cond_time.tv_sec = alarm->time;
             cond_time.tv_nsec = 0;
-            current_alarm = alarm->time;
-            while (current_alarm == alarm->time) {
+            current_alarm_3 = alarm->time;
+            while (current_alarm_3== alarm->time) {
                 status = pthread_cond_timedwait (
                     &alarm_cond3, &alarm_mutex, &cond_time);
                 if (status == ETIMEDOUT) {
@@ -377,8 +375,8 @@ void *display_3_thread (void *arg){
         } else
             expired = 1;
         if (expired) {
-            printf ("(%d) %s\n", alarm->seconds, alarm->message);
-            printf("Alarm (%d) Printed by Alarm Display Thread 2 at %ld:%ld", alarm->id,  time (NULL), alarm->time);
+            printf ("\n(%d) %s\n", alarm->seconds, alarm->message);
+            printf("\nAlarm (%d) Printed by Alarm Display Thread 2 at %ld:%ld\n", alarm->id,  time (NULL), alarm->time);
             // lower the count of alarms in this thread
             display1_count--;
             //if the thread is empty, terminate
@@ -425,18 +423,31 @@ void *alarm_thread (void *arg)
         // of if a thread should be terminated
         if(display1_count == 0 && printed == 0){
             pthread_cancel(thread1);
-            printf("Alarm Thread Terminated Display Thread 1 at %ld\n", time (NULL));
+            printf("\nAlarm Thread Terminated Display Thread 1 at %ld\n", time (NULL));
             printed = 1;
+            status1 = pthread_create (
+                &thread1, NULL, display_1_thread, NULL);
+	
+            if (status1 != 0)
+                err_abort (status1, "Create alarm thread");
         }
         else if(display2_count == 0 && printed == 0){
             pthread_cancel(thread2);
-            printf("Alarm Thread Terminated Display Thread 2 at %ld\n", time (NULL));
+            printf("\nAlarm Thread Terminated Display Thread 2 at %ld\n", time (NULL));
             printed = 1;
+            status2 = pthread_create (
+                &thread2, NULL, display_2_thread, NULL);
+            if (status2 != 0)
+                err_abort (status2, "Create alarm thread");
         }
         else if(display3_count == 0 && printed == 0){
             pthread_cancel(thread3);
-            printf("Alarm Thread Terminated Display Thread 3 at %ld\n", time (NULL));
+            printf("\nAlarm Thread Terminated Display Thread 3 at %ld\n", time (NULL));
             printed = 1;
+            status3 = pthread_create (
+                &thread3, NULL, display_3_thread, NULL);
+            if (status3 != 0)
+                err_abort (status3, "Create alarm thread");
         }
     }
 	
@@ -469,7 +480,7 @@ int main (int argc, char *argv[])
         err_abort (status, "Create alarm thread");
 
     while (1) {
-        printf ("alarm> ");
+        printf ("\nalarm> ");
         if (fgets (line, sizeof (line), stdin) == NULL) exit (0);
         if (strlen (line) <= 1) continue;
         alarm = (alarm_t*)malloc (sizeof (alarm_t));
@@ -528,7 +539,7 @@ int main (int argc, char *argv[])
 				  * sorted by Message Type
 				  */
 				  alarm_insert(alarm);
-				  printf("Alarm(%d) Inserted by Main Thread %ld Into Alarm List at %ld: %s\n", 
+				  printf("\nAlarm(%d) Inserted by Main Thread %ld Into Alarm List at %ld: %s\n", 
 				  alarm->id, (long)pthread_self(), time (NULL), alarm->message );
 				  status = pthread_mutex_unlock (&alarm_mutex);
 				  
