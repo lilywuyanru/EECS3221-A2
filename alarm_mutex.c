@@ -102,7 +102,10 @@ void alarm_insert (alarm_t *alarm)
      * work), or if the new alarm comes before the one on
      * which the alarm thread is waiting.
      */
-    if ((current_alarm_1 == 0 || alarm->time < current_alarm_1) && display1_count <= display2_count && display1_count <= display2_count) {
+    // if ((current_alarm_1 == 0 || alarm->time < current_alarm_1) && display1_count <= display2_count && display1_count <= display2_count) {
+     if (display1_count == 0) {
+        printf("\n count1: %d, count2: %d, count3: %d", display1_count, display2_count, display3_count);
+
         printf("\nAlarm Thread Created New Display Alarm Thread 1 For Alarm(%d at %ld: %s.", alarm->id,  time (NULL), alarm->message);
         current_alarm_1 = alarm->time;
         status = pthread_cond_signal (&alarm_cond1);
@@ -110,7 +113,10 @@ void alarm_insert (alarm_t *alarm)
         if (status != 0)
             err_abort (status, "Signal cond");
     }
-    else if ((current_alarm_2 == 0 || alarm->time < current_alarm_2) && display2_count <= display1_count && display2_count <= display3_count) {
+    // else if ((current_alarm_2 == 0 || alarm->time < current_alarm_2) && display2_count <= display1_count && display2_count <= display3_count) {
+    else if (display2_count == 0) {
+        printf("\n count1: %d, count2: %d, count3: %d", display1_count, display2_count, display3_count);
+
         printf("\nAlarm Thread Created New Display Alarm Thread 2 For Alarm( %d at %ld: %s.", alarm->id,  time (NULL), alarm->message);
         current_alarm_2 = alarm->time;
         status = pthread_cond_signal (&alarm_cond2);
@@ -118,14 +124,47 @@ void alarm_insert (alarm_t *alarm)
         if (status != 0)
             err_abort (status, "Signal cond");
     } 
-    else if ((current_alarm_3 == 0 || alarm->time < current_alarm_3) && display3_count <= display1_count && display3_count <= display2_count) {
+    // else if ((current_alarm_3 == 0 || alarm->time < current_alarm_3) && display3_count <= display1_count && display3_count <= display2_count) {
+    else if (display3_count == 0) {
+        printf("\n count1: %d, count2: %d, count3: %d", display1_count, display2_count, display3_count);
+
         printf("\nAlarm Thread Created New Display Alarm Thread 3 For Alarm( %d at %ld: %s.", alarm->id,  time (NULL), alarm->message);
         current_alarm_3 = alarm->time;
         status = pthread_cond_signal (&alarm_cond3);
         display3_count++;
         if (status != 0)
             err_abort (status, "Signal cond");
-    } 
+    }
+    // assign alarm to existing display alarm thread which has the smallest number of alarms assinged
+    else if (display1_count != 0 && display2_count != 0 && display3_count != 0){
+        if (display1_count <= display2_count && display1_count <= display3_count){
+            printf("\n count1: %d, count2: %d, count3: %d", display1_count, display2_count, display3_count);
+            printf("\nAlarm Thread Display Alarm Thread 1 Assigned to Display Alarm( %d at %ld: %s.", alarm->id,  time (NULL), alarm->message);
+            current_alarm_1 = alarm->time;
+            status = pthread_cond_signal (&alarm_cond1);
+            display1_count++;
+            if (status != 0)
+                err_abort (status, "Signal cond");
+        }
+        else if(display2_count <= display1_count && display2_count <= display3_count){
+            printf("\n count1: %d, count2: %d, count3: %d", display1_count, display2_count, display3_count);
+            printf("\nAlarm Thread Display Alarm Thread 2 Assigned to Display Alarm( %d at %ld: %s.", alarm->id,  time (NULL), alarm->message);
+            current_alarm_2 = alarm->time;
+            status = pthread_cond_signal (&alarm_cond2);
+            display2_count++;
+            if (status != 0)
+                err_abort (status, "Signal cond");
+        }
+        else if(display3_count < display1_count && display3_count < display2_count) {
+            printf("\n count1: %d, count2: %d, count3: %d", display1_count, display2_count, display3_count);
+            printf("\nAlarm Thread Display Alarm Thread 3 Assigned to Display Alarm( %d at %ld: %s.", alarm->id,  time (NULL), alarm->message);
+            current_alarm_3 = alarm->time;
+            status = pthread_cond_signal (&alarm_cond3);
+            display3_count++;
+            if (status != 0)
+                err_abort (status, "Signal cond");
+        }
+    }
 }
 
 /*
@@ -197,6 +236,12 @@ void *display_1_thread (void *arg){
         now = time (NULL);
         expired = 0;
         if (alarm->time > now) {
+            do {
+                printf("Alarm(%d) Printed by Alarm Display Thread 1 at %ld %s\n", \
+                    alarm->id, time (NULL), alarm->message);
+                sleep(5);
+            } while (alarm->time > time(NULL));
+       
 #ifdef DEBUG
             printf ("[waiting: %d(%d)\"%s\"]\n", alarm->time,
                 alarm->time - time (NULL), alarm->message);
@@ -204,6 +249,7 @@ void *display_1_thread (void *arg){
             cond_time.tv_sec = alarm->time;
             cond_time.tv_nsec = 0;
             current_alarm = alarm->time;
+
             while (current_alarm == alarm->time) {
                 status = pthread_cond_timedwait (
                     &alarm_cond1, &alarm_mutex, &cond_time);
@@ -218,11 +264,12 @@ void *display_1_thread (void *arg){
                 alarm_insert (alarm);
         } else
             expired = 1;
+
         if (expired) {
-            display1_count--;
             printf ("(%d) %s\n", alarm->seconds, alarm->message);
+            display2_count--;
             free (alarm);
-        }
+        } 
     }
 }
 
@@ -252,6 +299,11 @@ void *display_2_thread (void *arg){
         now = time (NULL);
         expired = 0;
         if (alarm->time > now) {
+            do {
+                printf("Alarm(%d) Printed by Alarm Display Thread 2 at %ld %s\n", \
+                    alarm->id, time (NULL), alarm->message);
+                sleep(5);
+            } while (alarm->time > time(NULL));
 #ifdef DEBUG
             printf ("[waiting: %d(%d)\"%s\"]\n", alarm->time,
                 alarm->time - time (NULL), alarm->message);
@@ -307,6 +359,11 @@ void *display_3_thread (void *arg){
         now = time (NULL);
         expired = 0;
         if (alarm->time > now) {
+            do {
+                printf("Alarm(%d) Printed by Alarm Display Thread 2 at %ld %s\n", \
+                    alarm->id, time (NULL), alarm->message);
+                sleep(5);
+            } while (alarm->time > time(NULL));
 #ifdef DEBUG
             printf ("[waiting: %d(%d)\"%s\"]\n", alarm->time,
                 alarm->time - time (NULL), alarm->message);
@@ -326,6 +383,7 @@ void *display_3_thread (void *arg){
             }
             if (!expired)
                 alarm_insert (alarm);
+                
         } else
             expired = 1;
         if (expired) {
@@ -333,8 +391,14 @@ void *display_3_thread (void *arg){
             display3_count--;
             free (alarm);
         }
+        status = pthread_mutex_unlock(&alarm_mutex);
+    	if (status != 0)
+            err_abort(status, "unlock mutex");
+        free(alarm);
     }
 }
+
+
 /*
  * The alarm thread's start routine.
  */
@@ -364,8 +428,6 @@ void *alarm_thread (void *arg)
         &thread3, NULL, display_3_thread, NULL);
     if (status3 != 0)
         err_abort (status3, "Create alarm thread");
-	
-	
 	
 	
     return NULL;
@@ -477,12 +539,11 @@ int main (int argc, char *argv[])
 					  err_abort (status, "Unlock mutex");
 
 			  }
-			  }
-					   
-				}
 			}
-			
-            
+					   
+			}
+		  }
+ 
         }
     }
 }
