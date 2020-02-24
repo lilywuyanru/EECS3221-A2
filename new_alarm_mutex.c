@@ -31,7 +31,8 @@ typedef struct alarm_tag {
     time_t              time;   /* seconds from EPOCH */
     char                message[64];
     int                 id;
-    int                 thread; 
+    int                 thread;
+    char                request[100];
 } alarm_t;
 
 /* initialize all the mutexes and conditionals */
@@ -155,8 +156,14 @@ void *display_thread(void *thread_id)
           now = time (NULL);
           /* print a message every 5 seconds */
           do {
+            if(strcmp(alarm->request, "Start_Alarm") == 0) {
                 printf("Alarm(%d) Printed by Alarm Display Thread 1 at %ld %s\n", \
                     alarm->id, time (NULL), alarm->message);
+            }
+            else{
+              printf("Display Thread %d Starts to Print Changed Messaged at %ld: %s\n", \
+                    alarm->thread, time (NULL), alarm->message);
+            }
                 sleep(5);
             } while (alarm->time > time(NULL));
 
@@ -452,14 +459,14 @@ int main (int argc, char *argv[])
          * separated from the seconds by whitespace.
          */
         if (sscanf (line, "%s %d %64[^\n]", 
-            request, &alarm->seconds, alarm->message) < 3) {
+            alarm->request, &alarm->seconds, alarm->message) < 3) {
             fprintf (stderr, "Bad command\n");
             free (alarm);
         } else {
             time_t t = time(NULL);
 			
             /*Split input request by delimeter1*/
-		    comm = strtok(request, delim1); 
+		    comm = strtok(alarm->request, delim1); 
 			num = strtok(NULL, delim1);
 		
 			/*Check if string contains ')' and if so, split by delimeter2*/
@@ -485,7 +492,7 @@ int main (int argc, char *argv[])
             int numid = atoi(id);
             alarm->id = numid;
           if (alarm->id >= 0) {
-            if(strcmp(request, "Start_Alarm") == 0) {
+            if(strcmp(alarm->request, "Start_Alarm") == 0) {
 
               status = pthread_mutex_lock (&alarm_mutex);
               if (status != 0)
@@ -505,7 +512,7 @@ int main (int argc, char *argv[])
                 err_abort (status, "Unlock mutex");
 
             } 
-            else if (strcmp(request, "Change_Alarm") == 0) {
+            else if (strcmp(alarm->request, "Change_Alarm") == 0) {
 
               status = pthread_mutex_lock (&alarm_mutex);
               if (status != 0)
