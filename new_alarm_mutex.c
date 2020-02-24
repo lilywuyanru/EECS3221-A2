@@ -154,14 +154,11 @@ void *display_thread(void *thread_id)
           
           now = time (NULL);
           /* print a message every 5 seconds */
-          while(alarm->time > time (NULL))
-          {
-              printf("Display Thread %d: Number of Seconds Left %d: Time: %d: "
-              "%d %s\n", alarm->thread, alarm->time - time (NULL), now
-                , alarm->seconds, alarm->message);
-                // wait 5 seconds
-              sleep(5);
-          }
+          do {
+                printf("Alarm(%d) Printed by Alarm Display Thread 1 at %ld %s\n", \
+                    alarm->id, time (NULL), alarm->message);
+                sleep(5);
+            } while (alarm->time > time(NULL));
 
           /* current alarm has expired */
         if(alarm->thread == 1) {
@@ -172,7 +169,7 @@ void *display_thread(void *thread_id)
             thread3count -= 1;
           }
         /* print a message to say the alarm thread has ecpired*/ 
-        printf("Display Thread %d: Alarm Expired at %d: "
+        printf("Display Thread %d: Alarm Expired at %ld: "
           "%d %s\n", alarm->thread, time (NULL), alarm->seconds, alarm->message);
         printf("Alarm Thread Removed Alarm( %d at %ld : %d.\n", alarm->id, time(NULL), alarm->seconds);
       status = pthread_mutex_unlock(&alarm_mutex);
@@ -262,7 +259,7 @@ void *alarm_thread (void *arg)
                 alarm->thread = (int)display1thread;
 
                 printf("\nAlarm Thread Created New Display Alarm Thread %d For Alarm(%i) at %ld: %d %s\n",
-                              (int)display1thread, alarm->id, time(NULL), alarm->seconds, alarm->message);  
+                              alarm->thread, alarm->id, time(NULL), alarm->seconds, alarm->message);  
 
               } else if(thread2 == 0){
                 status = pthread_create (
@@ -272,10 +269,9 @@ void *alarm_thread (void *arg)
                 alarm->thread = (int)display2thread;
                 
                 printf("\nAlarm Thread Created New Display Alarm Thread %d For Alarm(%i) at %ld: %d %s\n",
-                              (int)display2thread, alarm->id, time(NULL), alarm->seconds, alarm->message); 
+                              alarm->thread, alarm->id, time(NULL), alarm->seconds, alarm->message); 
       
-              } else {
-              printf("MAKE 3");
+              } else if (thread3 == 0){
                 status = pthread_create (
 	                &display3thread, NULL, display_thread, NULL);
                 thread3 = 1;
