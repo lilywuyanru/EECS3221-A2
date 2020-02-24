@@ -325,10 +325,11 @@ void *alarm_thread (void *arg)
             //     err_abort (status, "Wait on cond");
 
           if (--display1thread == 0)
-          {
+          {     
                 printf("\nAlarm Thread Terminated Display Thread %i at %ld", (int)display1thread, time(NULL));
                 thread1 = 0;
                 display_thread_count -= 1;
+                // pthread_cancel(display1thread);
 
           }
 
@@ -337,6 +338,7 @@ void *alarm_thread (void *arg)
                 printf("\nAlarm Thread Terminated Display Thread %i at %ld", (int)display1thread, time(NULL));
                 thread2 = 0;
                 display_thread_count -= 1;
+                // pthread_cancel(display2thread);
 
           }
 
@@ -345,6 +347,7 @@ void *alarm_thread (void *arg)
                 printf("\nAlarm Thread Terminated Display Thread %i at %ld", (int)display1thread, time(NULL));
                 thread3 = 0;
                 display_thread_count -= 1;
+                // pthread_cancel(display3thread);
 
           }
 
